@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: winwin-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: winwin_db
+    ports:
+      - "5432:5432"
+    networks:
+      - winwin-net
+
+  # 2. Service B
+  data-api:
+    build: ./data-api
+    container_name: winwin-data
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      INTERNAL_TOKEN: "super-secret-key-123"
+    networks:
+      - winwin-net
+
+  # 3. Service A
+  auth-api:
+    build: ./auth-api
+    container_name: winwin-auth
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - data-api
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/winwin_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      SERVICE_B_URL: http://data-api:8081/api/transform
+
+      INTERNAL_TOKEN: "super-secret-key-123"
+      JWT_SECRET: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+    networks:
+      - winwin-net
+
+networks:
+  winwin-net:
+    driver: bridge
